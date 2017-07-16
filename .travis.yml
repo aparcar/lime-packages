@@ -32,4 +32,5 @@ install:
 - sed 's|https://github.com/libremesh/lime-packages.git;develop|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local
 script:
 - cd $TRAVIS_BUILD_DIR/sdk
+- cat feeds.conf.default.local
 - ./cooker --flavor=lime_default -c x86/generic --profile=Generic
