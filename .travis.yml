@@ -30,14 +30,11 @@
     "git clone https://github.com/libremesh/lime-sdk.git sdk",
     "cd sdk",
     "./cooker -d x86/generic || true",
-    "sed 's|https://github.com/libremesh/lime-packages.git;develop|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local"
+    "sed 's|https://github.com/libremesh/lime-packages.git;17.06|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local"
   ],
   "script": [
     "cd $TRAVIS_BUILD_DIR/sdk",
-    "cat feeds.conf.default",
-    "cat feeds.conf.default.local",
     "J=1 V=s ./cooker --flavor=lime_default -c x86/generic",
-    "cat tmp/x86-generic.Default.log.fail"
   ],
   "group": "stable",
   "os": "linux"
