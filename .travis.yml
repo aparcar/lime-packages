@@ -19,8 +19,8 @@ addons:
 notifications:
   email: false
 language: c
+cache: ccache
 cache: 
-  ccache: true
   directories:
     - $TRAVIS_BUILD_DIR/sdk/17.01.2
 - ccache
