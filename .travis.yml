@@ -32,6 +32,7 @@
   ],
   "script": [
     "cd $TRAVIS_BUILD_DIR/sdk",
+    "cat feeds.conf.default",
     "J=1 V=s ./cooker --flavor=lime_default -c x86/generic",
     "cat tmp/x86-generic.Default.log.fail"
   ],
