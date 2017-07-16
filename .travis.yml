@@ -1,42 +1,32 @@
-{
-  "sudo": false,
-  "dist": "trusty",
-  "addons": {
-    "apt": {
-      "sources": [ 'ubuntu-toolchain-r-test'],
-      "packages": [
-        "subversion",
-        "libstdc++6",
-        "build-essential",
-        "libncurses5-dev",
-        "zlib1g-dev",
-        "gawk",
-        "ccache",
-		"gettext",
-        "libssl-dev",
-		"xsltproc",
-		"wget",
-		"unzip",
-        "flex",
-        "git-core"
-      ]
-    }
-  },
-  "language": "c",
-  "cache": "ccache",
-  "install": [
-    "cd $TRAVIS_BUILD_DIR",
-    "rm -rf sdk",
-    "git clone https://github.com/libremesh/lime-sdk.git sdk",
-    "cd sdk",
-    "./cooker -d x86/generic || true",
-    "sed 's|https://github.com/libremesh/lime-packages.git;17.06|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local"
-  ],
-  "script": [
-    "cd $TRAVIS_BUILD_DIR/sdk",
-    "./cooker -c x86/generic"
-  ],
-  "group": "stable",
-  "os": "linux"
-}
-
+sudo: false
+dist: trusty
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - build-essential
+    - subversion
+    - libncurses5-dev
+    - zlib1g-dev
+    - gawk
+    - gcc-multilib
+    - flex
+    - git-core
+    - gettext
+    - libssl-dev
+    - libstdc++6-4.7-dev
+notifications:
+  email: false
+language: c
+cache: ccache
+install:
+- cd $TRAVIS_BUILD_DIR
+- rm -rf sdk
+- git clone https://github.com/libremesh/lime-sdk.git sdk
+- cd sdk
+- ./cooker -d x86/generic || true
+- sed 's|https://github.com/libremesh/lime-packages.git;develop|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local
+script:
+- cd $TRAVIS_BUILD_DIR/sdk
+- ./cooker --flavor=lime_default -c x86/generic --profile=Generic
