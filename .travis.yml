@@ -1,0 +1,40 @@
+{
+  "sudo": false,
+  "dist": "trusty",
+  "addons": {
+    "apt": {
+      "packages": [
+        "subversion",
+        "build-essential",
+        "libncurses5-dev",
+        "zlib1g-dev",
+        "gawk",
+        "ccache",
+		"gettext",
+        "libssl-dev",
+		"xsltproc",
+		"wget",
+		"unzip",
+        "flex",
+        "git-core"
+      ]
+    }
+  },
+  "language": "c",
+  "cache": "ccache",
+  "install": [
+    "cd $TRAVIS_BUILD_DIR",
+    "rm -rf sdk",
+    "git clone https://github.com/libremesh/lime-sdk.git sdk",
+    "cd sdk",
+    "./cooker -d x86/generic || true",
+    "sed 's|https://github.com/libremesh/lime-packages.git;develop|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local"
+  ],
+  "script": [
+    "cd $TRAVIS_BUILD_DIR/sdk",
+    "J=1 V=s ./cooker --flavor=lime_default -c x86/generic"
+  ],
+  "group": "stable",
+  "os": "linux"
+}
+
