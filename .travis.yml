@@ -19,15 +19,17 @@ addons:
 notifications:
   email: false
 language: c
+before_cache:
+  - mkdir -p $TRAVIS_BUILD_DIR/sdk/17.01.2
 cache: 
   ccache: true
   directories:
     - $TRAVIS_BUILD_DIR/sdk/17.01.2
 install:
 - cd $TRAVIS_BUILD_DIR
-- rm -rf sdk
 - git clone https://github.com/libremesh/lime-sdk.git sdk
 - cd sdk
+- git pull
 - ./cooker -d x86/generic || true
 - sed 's|https://github.com/libremesh/lime-packages.git;develop|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local
 script:
