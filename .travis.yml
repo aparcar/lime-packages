@@ -3,8 +3,10 @@
   "dist": "trusty",
   "addons": {
     "apt": {
+      "sources": [ 'ubuntu-toolchain-r-test'],
       "packages": [
         "subversion",
+        "libstdc++6",
         "build-essential",
         "libncurses5-dev",
         "zlib1g-dev",
