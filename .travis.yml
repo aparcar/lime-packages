@@ -20,6 +20,10 @@ notifications:
   email: false
 language: c
 cache: ccache
+  directories:
+    - $TRAVIS_BUILD_DIR/sdk/17.01.2
+- ccache
+
 install:
 - cd $TRAVIS_BUILD_DIR
 - rm -rf sdk
