@@ -34,7 +34,7 @@
   ],
   "script": [
     "cd $TRAVIS_BUILD_DIR/sdk",
-    "J=1 V=s ./cooker --flavor=lime_default -c x86/generic",
+    "./cooker -c x86/generic"
   ],
   "group": "stable",
   "os": "linux"
