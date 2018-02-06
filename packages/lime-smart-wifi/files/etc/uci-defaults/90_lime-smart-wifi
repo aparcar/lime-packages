@@ -1,0 +1,21 @@
+#!/bin/sh
+
+uci -q get lime-defaults.@smart_wifi[0] || {
+    uci batch <<EOF
+    set lime-defaults.smart_wifi='smart_wifi'
+    set lime-defaults.smart_wifi.ap_2ghz=1
+    set lime-defaults.smart_wifi.ap_5ghz=0
+    set lime-defaults.smart_wifi.mesh_2ghz=1
+    set lime-defaults.smart_wifi.mesh_5ghz=1
+    set lime-defaults.smart_wifi.all_to_mesh=0
+    set lime-defaults.smart_wifi.all_to_ap=0
+    add_list lime-defaults.smart_wifi.channels_2ghz=1
+    add_list lime-defaults.smart_wifi.channels_2ghz=11
+    add_list lime-defaults.smart_wifi.channels_2ghz=6
+    add_list lime-defaults.smart_wifi.channels_5ghz=36
+    add_list lime-defaults.smart_wifi.channels_5ghz=48
+    commit lime-defaults
+EOF
+}
+
+/usr/bin/lime-smart_wifi > /tmp/log/lime-smart_wifi.log
