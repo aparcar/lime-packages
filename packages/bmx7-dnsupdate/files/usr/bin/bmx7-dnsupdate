@@ -1,0 +1,18 @@
+#!/bin/sh
+
+while true; do
+    # create hosts file for bmx7 hostnames
+    bmx7 -c originators | tail -n +3 | \
+        awk '{ print $13" "$2 }' > /tmp/hosts/bmx7_hostnames
+
+    # create hosts file for bmx7 shortids
+    bmx7 -c originators | tail -n +3 | \
+            awk '{ print $13" "$1 }' > /tmp/hosts/bmx7_shortids
+
+    # update dnsmasq
+    logger -t bmx7-dnsupdate "dnsmasq updated due to new hosts"
+    killall -HUP dnsmasq
+
+    # block until originators changes
+    inotifywait -e create -e delete -q /var/run/bmx7/json/originators/
+done
