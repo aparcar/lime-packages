@@ -23,6 +23,7 @@ config lime network
 	list protocols anygw
 	list protocols batadv:%N1
 	list protocols bmx6:13
+	list protocols bmx7:13
 	list protocols olsr:14
 	list protocols olsr6:15
 	list protocols olsr2:16
