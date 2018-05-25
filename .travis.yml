@@ -1,37 +1,61 @@
 sudo: false
 dist: trusty
-addons:
-  apt:
-    sources:
-    - sourceline: 'ppa:ubuntu-toolchain-r/test'
-    packages:
-    - build-essential
-    - subversion
-    - libncurses5-dev
-    - zlib1g-dev
-    - gawk
-    - gcc-multilib
-    - flex
-    - git-core
-    - gettext
-    - libssl-dev
-    - libstdc++6-4.7-dev
 notifications:
   email: false
 language: c
-install:
-- cd $TRAVIS_BUILD_DIR
-- git clone https://github.com/libremesh/lime-sdk.git sdk || true
-- cd sdk
-- sed 's|https://github.com/libremesh/lime-packages.git.*|'$TRAVIS_BUILD_DIR'|g' feeds.conf.default > feeds.conf.default.local
-- ./cooker -f -d x86/generic
+cache:
+  directories:
+    - $HOME/sdk
+addons:
+  apt:
+    packages:
+      - subversion 
+      - g++
+      - zlib1g-dev
+      - build-essential 
+      - git 
+      - python 
+      - rsync 
+      - man-db
+      - libncurses5-dev 
+      - gawk 
+      - gettext 
+      - unzip 
+      - file 
+      - libssl-dev 
+      - sshpass
+      - lua5.2
+      - wget 
+      - tree
+      - zip
+before_script:
+  - ./.travis_do.sh setup_sdk
 script:
-- cd $TRAVIS_BUILD_DIR/sdk
-- export J=$(($(nproc)+1))
-- ./cooker -b x86/generic
-- travis_wait ./cooker --flavor=lime_default -c x86/generic --profile=Generic
-- travis_wait ./cooker --flavor=lime_mini -c x86/generic --profile=Generic
-- travis_wait ./cooker --flavor=lime_zero -c x86/generic --profile=Generic
+  - ./.travis_do.sh build_packages
 after_success:
-- chmod +x $TRAVIS_BUILD_DIR/.ci/after_success.sh
-- $TRAVIS_BUILD_DIR/.ci/after_success.sh
+  - ./.travis_do.sh upload_packages
+env:
+  - SDK_TARGET="ar71xx/generic"
+  - SDK_TARGET="x86/64"
+  - SDK_TARGET="ramips/rt305x"
+  - SDK_TARGET="ramips/rt3883"
+  - SDK_TARGET="ramips/mt7620"
+  - SDK_TARGET="ramips/mt7621"
+  - SDK_TARGET="ramips/mt76x8"
+  - SDK_TARGET="lantiq/xrx200"
+  - SDK_TARGET="lantiq/xway"
+  - SDK_TARGET="x86/generic"
+  - SDK_TARGET="x86/geode"
+  - SDK_TARGET="ipq806x/generic"
+  - SDK_TARGET="brcm2708/bcm2708"
+  - SDK_TARGET="brcm2708/bcm2709"
+  - SDK_TARGET="brcm2708/bcm2710"
+  - SDK_TARGET="brcm47xx/mips74k"
+  - SDK_TARGET="brcm63xx/smp"
+  - SDK_TARGET="octeon/generic"
+  - SDK_TARGET="sunxi/cortexa53"
+  - SDK_TARGET="sunxi/cortexa7"
+  - SDK_TARGET="sunxi/cortexa8"
+  - SDK_TARGET="mediatek/32"
+  - SDK_TARGET="armvirt/64"
+    #  - SDK_TARGET="armvirt/32"
