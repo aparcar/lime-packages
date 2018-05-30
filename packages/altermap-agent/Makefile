@@ -33,6 +33,6 @@ define Package/$(PKG_NAME)/install
 	$(CP) ./files/* $(1)/
 endef
 
-break
+break2
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
