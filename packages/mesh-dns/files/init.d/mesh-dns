@@ -1,0 +1,323 @@
+#!/bin/sh /etc/rc.common
+
+. /usr/share/libubox/jshn.sh
+
+START=99
+STOP=99
+
+# Configuration variables
+MDNS_DIR="/etc/mdns"
+HOSTF="$MDNS_DIR/hosts"
+MY_DOMAINS="$MDNS_DIR/public"
+SMSF="/var/run/bmx6/sms/sendSms/mdns"
+SMSTMP="/tmp/sms-mdns.tmp"
+SMSR="/var/run/bmx6/sms/rcvdSms"
+DNSMASQ="/etc/dnsmasq.conf"
+DNSMASQ_PID_DIR="/var/run/dnsmasq/"
+
+[ ! -d $MDNS_DIR ] && mkdir $MDNS_DIR
+[ ! -f $HOSTF ] && touch $HOSTF
+[ ! -f $MY_DOMAINS ] && touch $MY_DOMAINS
+[ ! -f $MDNS_DIR/domain4 ] && touch $MDNS_DIR/domain4
+[ ! -f $MDNS_DIR/domain6 ] && touch $MDNS_DIR/domain6
+[ ! -f $SMSF ] && touch $SMSF
+
+DOMAINS4="$(cat $MDNS_DIR/domain4)"
+DOMAINS6="$(cat $MDNS_DIR/domain6)"
+
+# Optional
+IPV4=""
+IPV6=""
+
+start() {
+	if ! cat /etc/crontabs/root | grep mdns > /dev/null; then
+		int=$(echo "0x$(dd if=/dev/urandom bs=1 count=1 2>&- | hexdump | \
+			if read line; then echo ${line#* }; fi)" | awk '{print ($1 % 60)}')
+		int=${int:-10}
+		echo "$int * * * * /etc/init.d/mdns reload > /tmp/log/mdns.log" >> /etc/crontabs/root
+		/etc/init.d/cron enable
+		/etc/init.d/cron start
+	fi
+	/etc/init.d/mdns reload
+}
+
+stop() {
+	sed -i -e '/.*\/etc\/init\.d\/mdns reload > \/tmp\/log\/mdns\.log$/d' /etc/crontabs/root
+	/etc/init.d/cron restart
+	[ -f $SMSF ] && rm -f $SMSF
+}
+
+reload() {
+	init
+	publish_my_domains
+	get_domains
+	finish
+}
+
+refresh() {
+	reload
+}
+
+# Code
+
+error() {
+	echo "ERROR: $@"
+	exit 1
+}
+
+log() {
+	echo -e "-> $@"
+}
+
+init() {
+	log "preparing bmx6"
+	bmx6 -c --syncSms mdns
+	[ $? -ne 0 ] && error "cannot configure bmx6 daemon"
+
+	cat $DNSMASQ | egrep "^addn-hosts=$HOSTF" -q || {
+		log "adding addn-host entry to dnsmasq config file"
+		echo "addn-hosts=$HOSTF" >> $DNSMASQ
+		log "restarting dnsmasq daemon"
+		/etc/init.d/dnsmasq restart
+	}
+	ps | grep dnsmasq -q || error "dnsmasq not running"
+
+	log "cleaning files"
+	[ -f $HOSTF ] && rm -f $HOSTF
+	touch $HOSTF
+
+	[ ! -d $MDNS_DIR ] && mkdir -p $MDNS_DIR
+	touch $MY_DOMAINS
+}
+
+check_domain() {
+		local v="$1"
+		local d="$2"
+		local valid=1
+		local domains=""
+
+		[ $v == "4" ] && domains="$DOMAINS4"
+		[ $v == "6" ] && domains="$DOMAINS6"
+		[ $v == "all" ] && domains="$DOMAINS4 $DOMAINS6"
+
+		for D in $domains; do
+			echo "$d" | egrep "\.$D"$ -q && valid=0 && break
+		done
+
+		return $valid
+}
+
+get_my_domains() {
+	local v=${1:-4}
+	local my_domains=""
+	local domains=""
+	local d t
+
+	for d in $(cat $MY_DOMAINS); do
+		echo "$d" | grep -q ^# && continue
+		echo "$d" | grep -q -v @ && my_tmp_domains="$d $my_tmp_domains"
+	done
+
+	[ "$v" == "4" ] && domains="$DOMAINS4"
+	[ "$v" == "6" ] && domains="$DOMAINS6"
+
+	for t in $my_tmp_domains; do
+		for d in $domains; do
+			my_domains="$t.$d $my_domains"
+		done
+	done
+
+	for d in $domains; do
+		my_domains="$(cat /proc/sys/kernel/hostname).$d $my_domains"
+	done
+
+	echo $my_domains
+}
+
+get_myext_domains() {
+	local ext_domains=""
+	local d ip domain
+	local my_ext_domains=""
+
+	for d in $(cat $MY_DOMAINS); do
+		echo "$d" | grep -q ^# && continue
+		echo "$d" | grep -q @ && ext_domains="$d $ext_domains"
+	done
+
+	for d in $ext_domains; do
+		ip="$(echo $d | grep @ | cut -d@ -f2)"
+		domain="$(echo $d | grep @ | cut -d@ -f1)"
+		[ -z "$ip" -o -z "$domain" ] && continue
+		my_ext_domains="$ip $domain\n$my_ext_domains"
+	done
+
+	echo -e "$my_ext_domains"
+}
+
+dns_entry() {
+
+    local args=""
+	local section="$1"
+	local disabled interface mode
+
+    config_get name "$section" name
+    config_get ipv4 "$section" ipv4 ""
+    config_get ipv6 "$section" ipv6 ""
+
+    [ -n "$name" ] && {
+        [ -n "$ipv4" ] && echo "$ipv4 $name" >> /tmp/hosts/mesh-dns-local
+        [ -n "$ipv6" ] && echo "$ipv6 $name" >> /tmp/hosts/mesh-dns-local
+    [
+}
+
+reload_service() {
+    > /tmp/hosts/mesh-dns-local
+    config_foreach dns_entry dns
+
+    config_get add_nodes bmx7 add_nodes "false"
+    [ "$add_nodes" == "true" ] && bmx_dnsupdate "7"
+
+    config_get share bmx7 share "false"
+    bmx_share "7" "share"
+
+    alfred_share
+}
+
+alfred_share() {
+    config_get enabled alfred enabled "true"
+    [ "$2" == "true" ] || [ "$2" == "1" ] && {
+        config_get id alfred id "70"
+        cat /tmp/hosts/mesh-dns-local | alfred -s "$id"
+    }
+}
+
+
+bmx_share() { # version state
+    [ -d "/var/run/bmx$1/sms/" ] || return
+    [ "$2" == "true" ] || [ "$2" == "1" ] && {
+        ln -s /tmp/hosts/mesh-dns-local /var/run/bmx$1/sms/sendSms/mesh-dns
+        bmx$1 -c --syncSms mesh-dns
+    } || {
+        rm -f /var/run/bmx$1/sms/sendSms/mesh-dns
+    }
+}
+
+start_service() {
+    config_load "mesh-dns"
+    config_get trusted_tld main trusted_tld "mesh lime"
+    config_get share_clients main share_clients "true"
+    config_get bmx7_nodes bmx7 bmx7_nodes "false"
+    config_get bmx6_nodes bmx6 bmx6_nodes "false"
+
+    reload_service
+
+
+}
+
+get_my_ip4() {
+	[ -z $IPV4 ] && \
+	bmx6 -cp | grep tun4Address | awk '{print $2}' | awk -F / '{print $1}' || \
+	echo "$IPV4"
+}
+
+get_my_ip6() {
+	[ -z $IPV4 ] && \
+	bmx6 -cp | grep tun6Address | awk '{print $2}' | awk -F / '{print $1}' || \
+	echo "$IPV6"
+}
+
+publish_my_domains() {
+	local d domains ext_domains
+
+	local ip4="$(get_my_ip4)"
+	local ip6="$(get_my_ip6)"
+
+	[ -f "$SMSTMP" ] && rm -f $SMSTMP
+
+	[ -z "$ip4$ip6" ] && error "cannot get ip address"
+
+	[ -n "$ip4" ] && {
+		domains="$(get_my_domains 4)"
+		log "publishing own IPv4 domains: $domains"
+		echo "$ip4 $domains" >> $SMSTMP
+		echo "$ip4 $domains" >> $HOSTF
+	}
+
+	[ -n "$ip6" ] && {
+		domains="$(get_my_domains 6)"
+		log "publishing own IPv6 domains: $domains"
+		echo "$ip6 $domains" >> $SMSTMP
+		echo "$ip6 $domains" >> $HOSTF
+	}
+
+	ext_domains="$(get_myext_domains)"
+	log "publishing own external domains:\n$ext_domains"
+	echo -e "$ext_domains" >> $SMSTMP
+	echo -e "$ext_domains" >> $HOSTF
+
+	sed '/./!d' -i $SMSTMP $HOSTF
+
+	[ $(md5sum $SMSTMP $SMSF | awk '{print $1}' | uniq | wc -l) -gt 1 ] && cp -f $SMSTMP $SMSF
+}
+
+get_domains() {
+	local f d domline ip line n i
+
+	ls $SMSR/*:mdns 2>/dev/null >/dev/null && {
+
+	  # for each received file
+	  for f in $SMSR/*:mdns; do
+		n=$(cat $f | wc -l)
+
+		# for each line inside the file
+		for i in $(seq $n); do
+			line=$(cat $f | awk "NR==$i")
+
+			ip="$(echo $line | awk '{print $1}')"
+			[ -z $ip ] && continue
+
+			domains=""
+			# for each domain (first is IP)
+			for d in $(echo "$line" | awk '{$1=""; print $0}'); do
+				check_domain all $d && domains="$d $domains"
+			done
+
+			[ -n "$domains" ] && echo "$ip $domains" >> $HOSTF
+			log "added remote domains $domains= $ip"
+	  done
+  done
+
+	  } || log "not published domains found in the network"
+}
+
+odhcpd_dns() {
+    [ -e /tmp/hosts/odhcpd ] || return
+    cat /tmp/hosts/odhcpd
+}
+
+bmx_dns() {
+    json_load "$(bmx$1 -c jshow=originators)"
+    json_select "originators"
+    idx="1"
+
+    # clean all bmx dns entries
+    > "/tmp/hosts/bmx$1"
+
+    while json_get_type Type "$idx" && [ "$Type" == object ]; do
+        json_select "$idx"
+        json_get_var shortId shortId
+        json_get_var name name
+        json_get_var primaryIp primaryIp
+        printf "$primaryIp $name\n$primaryIp $shortId\n" >> "/tmp/hosts/bmx$1"
+        json_select ..
+        $((idx++)) 2> /dev/null
+    done
+}
+
+finish() {
+	for pidfile in $DNSMASQ_PID_DIR*; do
+		kill -SIGHUP $(cat $pidfile)
+	done
+}
+
+$@
