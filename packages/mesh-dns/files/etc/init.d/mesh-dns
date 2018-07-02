@@ -1,0 +1,103 @@
+#!/bin/sh /etc/rc.common
+
+. /usr/share/libubox/jshn.sh
+
+USE_PROCD=1
+START=99
+
+dns_entry() {
+	local section="$1"
+	local name ipv4 ipv6
+
+    config_get name "$section" name
+    config_get ipv4 "$section" ipv4 ""
+    config_get ipv6 "$section" ipv6 ""
+
+    [ -n "$name" ] && {
+        [ -n "$ipv4" ] && echo "$ipv4 $name" >> /tmp/hosts/mesh-dns-local
+        [ -n "$ipv6" ] && echo "$ipv6 $name" >> /tmp/hosts/mesh-dns-local
+    }
+}
+
+start_service() {
+    reload_service
+}
+
+reload_service() {
+    config_load "mesh-dns"
+    config_get trusted_tld main trusted_tld "mesh lime"
+    config_get share_clients main share_clients "true"
+    config_get dns_suffix main dns_suffix "mesh"
+
+    local add_nodes
+    > /tmp/hosts/mesh-dns-local
+    config_foreach dns_entry dns
+
+    config_get add_nodes bmx7 add_nodes "false"
+    [ "$add_nodes" == "true" ] && bmx_dnsupdate "7"
+
+    config_get add_nodes bmx6 add_nodes "false"
+    [ "$add_nodes" == "true" ] && bmx_dnsupdate "6"
+
+    config_get share bmx7 share "false"
+    [ "$share" == "true" ] && bmx_share "7" "share"
+
+    config_get share bmx6 share "false"
+    [ "$share" == "true" ] && bmx_share "6" "share"
+
+    config_get enabled alfred enabled "true"
+    [ "$enabled" == "true" ] && alfred_share
+
+    config_get share main share_clients "true"
+    [ "$share" == "true" ] && share_clients
+
+    /etc/init.d/dnsmasq reload
+}
+
+share_clients() {
+    local hostname="$(cat /proc/sys/kernel/hostname)"
+    cat /tmp/hosts/dnsmasq* /tmp/hosts/odhcpd | grep -v -E "^#" \
+        sed "s/$/.$hostname.$dns_suffix/" >> /tmp/hosts/mesh-dns-local
+}
+
+alfred_share() {
+    config_get id alfred id "70"
+    cat /tmp/hosts/mesh-dns-local | alfred -s "$id"
+}
+
+bmx_share() { # version state
+    [ -d "/var/run/bmx$1/sms/" ] || return
+    [ "$2" == "true" ] || [ "$2" == "1" ] && {
+        ln -s /tmp/hosts/mesh-dns-local /var/run/bmx$1/sms/sendSms/mesh-dns
+        bmx$1 -c --syncSms mesh-dns
+    } || {
+        rm -f /var/run/bmx$1/sms/sendSms/mesh-dns
+    }
+}
+
+bmx_get() { # version
+    entries="$(cat /var/run/bmx${1}/sms/rcvdSms/*:mesh-dns | sort | uniq)"
+    trusted_tld_regex="$(echo $trusted_tld | sed 's/ /$|/g')"
+    echo "$entries" | grep -E "$trsuted_tld_regex" > "/tmp/hosts/mesh-dns-bmx${1}"
+}
+
+bmx_get_nodes() {
+    json_load "$(bmx$1 -c jshow=originators)"
+    json_select "originators"
+    local idx="1"
+
+    # clean all bmx dns entries
+    > "/tmp/hosts/bmx$1"
+
+    while json_get_type Type "$idx" && [ "$Type" == object ]; do
+        json_select "$idx"
+        json_get_var shortId shortId
+        json_get_var name name
+        json_get_var primaryIp primaryIp
+        printf "$primaryIp $name\n$primaryIp $shortId\n" >> "/tmp/hosts/bmx$1"
+        json_select ..
+        $((idx++)) 2> /dev/null
+    done
+}
+
+$@

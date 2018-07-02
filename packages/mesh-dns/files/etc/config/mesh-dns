@@ -1,0 +1,24 @@
+config main "main"
+    option dns_suffix "mesh" # used for sharing client entries
+    list trusted_tld "mesh" # other tlds are ignored
+    list trusted_tld "qmp"
+    option share_hosts_file "true" # to share /etc/hosts
+    option share_clients "true" # to share dnsmasq & odhcpd leases
+
+config alfred "alfred"
+    option enabled "false"
+    option id 70 # may use other number if this is already taken
+
+config bmx7 "bmx7"
+    option share "false"
+    option add_nodes "true" # add bmx7 short ID and hostname as DNS entry
+    list trusted_id "all" # if not all, list of IDs to trust as they're not in the local mesh
+
+config bmx6 "bmx6"
+    option share "false"
+    option add_nodes "true" # add bmx6 short ID and hostname as DNS entry
+
+#config dns "chat_mesh"
+#    option name "chat.mesh"
+#    option ipv4 "1.2.3.4"
+#    option ipv6 "2002:d161:ee7f:1::9b9"
