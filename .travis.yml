@@ -22,6 +22,6 @@ script:
   src-git routing https://github.com/openwrt/routing.git;$OPENWRT_BRANCH
   src-git libremesh https://github.com/libremesh/lime-packages.git;$TRAVIS_BRANCH
   EOF
-- docker run "$IMAGE_NAME" \
-  -v "/bin:/sdk/bin/packages/mips_24kc/libremesh" \
+- docker run "$IMAGE_NAME" 
+  -v "/bin:/sdk/bin/packages/mips_24kc/libremesh" 
   /bin/bash -c "./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && make"
