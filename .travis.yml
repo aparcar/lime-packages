@@ -24,4 +24,4 @@ script:
   EOF
 - docker run -v "/output:/sdk/bin/packages/mips_24kc/libremesh"
         "$IMAGE_NAME" /bin/bash -c
-        "./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && make"
+        "./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && make defconfig && make"
