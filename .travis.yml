@@ -15,7 +15,7 @@ before_script:
 
 script:
 - |
-  cat <<EOF > feeds.conf.default
+  cat <<EOF > /feeds.conf.default
   #src-git base https://github.com/openwrt/openwrt.git;$OPENWRT_BRANCH
   #src-git packages https://github.com/openwrt/packages.git;$OPENWRT_BRANCH
   #src-git luci https://github.com/openwrt/luci.git;$OPENWRT_BRANCH
