@@ -22,4 +22,4 @@ script:
         -v "/output:/sdk/bin/packages/mips_24kc/libremesh"
         -v "$(pwd)/feeds.conf.default:/sdk/feeds.conf.default"
         "$IMAGE_NAME" /bin/bash -c
-        "./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && ./scripts/feeds uninstall tinc && make defconfig && make"
+        "./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && ./scripts/feeds uninstall tinc && make defconfig && make -j V=s"
