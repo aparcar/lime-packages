@@ -28,7 +28,7 @@ script:
         -v "$(pwd)/feeds.conf.default:/sdk/feeds.conf.default"
         -v "$(pwd)/key-build:/sdk/key-build"
         "$IMAGE_NAME" /bin/bash -c
-        "apt update -qq && apt install time -y && ./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && ./scripts/feeds uninstall tinc && make defconfig && make"
+        "apt update -qq && apt install time sshpass -y && ./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && ./scripts/feeds uninstall tinc && make defconfig && make"
 
 deploy:
   provider: script
