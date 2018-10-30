@@ -26,7 +26,7 @@ script:
   EOF
 - |
   cat <<EOF > feeds.conf.default
-  src-git libremesh https://github.com/libremesh/lime-packages.git;$TRAVIS_BRANCH
+  src-git libremesh https://github.com/aparcar/lime-packages.git;$TRAVIS_BRANCH
   EOF
 - docker run 
         -v "/output:/sdk/bin/packages/mips_24kc/libremesh"
