@@ -12,13 +12,13 @@ env:
 
 before_script:
 - docker pull "$IMAGE_NAME" || true
+
+script:
 - |
-  cat <<EOF > /sdk/key-build
+  cat <<EOF > key-build
   untrusted comment: private key 7546f62c3d9f56b1
   $KEY_BUILD
   EOF
-
-script:
 - |
   cat <<EOF > feeds.conf.default
   src-git libremesh https://github.com/libremesh/lime-packages.git;$TRAVIS_BRANCH
@@ -26,6 +26,7 @@ script:
 - docker run 
         -v "/output:/sdk/bin/packages/mips_24kc/libremesh"
         -v "$(pwd)/feeds.conf.default:/sdk/feeds.conf.default"
+        -v "$(pwd)/key-build:/sdk/key-build"
         "$IMAGE_NAME" /bin/bash -c
         "apt update -qq && apt install time -y && ./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && ./scripts/feeds uninstall tinc && make defconfig && make"
 
