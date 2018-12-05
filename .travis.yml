@@ -25,15 +25,16 @@ script:
   $KEY_BUILD
   EOF
 - |
-  cat <<EOF > feeds.conf.default
+  cat <<EOF >> feeds.conf.default
   src-git libremesh https://github.com/libremesh/lime-packages.git;$TRAVIS_BRANCH
   EOF
 - docker run
         -v "/output:/sdk/bin/packages/mips_24kc/libremesh"
         -v "$(pwd)/feeds.conf.default:/sdk/feeds.conf.default"
         -v "$(pwd)/key-build:/sdk/key-build"
+        -v "$(pwd)/libremesh.sdk.config:/sdk/config"
         "$IMAGE_NAME" /bin/bash -c
-        "apt update -qq && apt install time -y && ./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && ./scripts/feeds uninstall tinc && make defconfig && make"
+        "./scripts/feeds update -a && ./scripts/feeds install -p libremesh -a && ./scripts/feeds uninstall tinc && cp /sdk/config /sdk/.config && make defconfig && make"
 
 deploy:
   provider: script
